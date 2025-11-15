@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register</title>
+<style>
+body { font-family: Arial, sans-serif; background:#f0f2f5; margin:0; padding:0; display:flex; justify-content:center; align-items:center; height:100vh; }
+.container { background:white; padding:30px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); width:100%; max-width:400px; }
+input, button { width:100%; padding:10px; margin-top:10px; border-radius:8px; border:1px solid #ccc; font-size:16px; }
+button { background:#007bff; color:white; border:none; cursor:pointer; }
+button:hover { background:#0056b3; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Register</h2>
+  <input type="text" id="name" placeholder="Nama lengkap">
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <input type="text" id="otp" placeholder="Kode OTP">
+  <button id="sendOtpBtn">Kirim OTP</button>
+  <button id="registerBtn">Register</button>
+  <p>Sudah punya akun? <a href="login.html">Login</a></p>
+</div>
+
+<script>
+const sendOtpBtn = document.getElementById('sendOtpBtn');
+const registerBtn = document.getElementById('registerBtn');
+
+sendOtpBtn.addEventListener('click', async ()=>{
+  const email = document.getElementById('email').value;
+  if(!email){ alert("Isi email"); return; }
+  const otp = Math.floor(100000 + Math.random()*900000); // 6 digit
+  localStorage.setItem('otp_'+email, otp);
+  try{
+    await fetch("/send-otp", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ email, otp }) });
+    alert("OTP terkirim ke email Anda");
+  } catch(err){ console.error(err); alert("Gagal kirim OTP"); }
+});
+
+registerBtn.addEventListener('click', ()=>{
+  const name = document.getElementById('name').value;
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const otp = document.getElementById('otp').value;
+  const savedOtp = localStorage.getItem('otp_'+email);
+
+  if(!name || !email || !password || !otp){ alert("Semua field wajib diisi"); return; }
+  if(otp != savedOtp){ alert("OTP salah"); return; }
+
+  const users = JSON.parse(localStorage.getItem('users') || "[]");
+  if(users.find(u=>u.email===email)){ alert("Email sudah terdaftar"); return; }
+
+  const newUser = { name, email, password, balance:0 };
+  users.push(newUser);
+  localStorage.setItem('users', JSON.stringify(users));
+  localStorage.setItem('currentUser', JSON.stringify(newUser));
+  alert("Register sukses!");
+  window.location.href="dashboard.html";
+});
+</script>
+
+</body>
+</html>

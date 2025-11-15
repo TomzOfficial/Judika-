@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login</title>
+<style>
+body { font-family: Arial, sans-serif; background:#f0f2f5; margin:0; padding:0; display:flex; justify-content:center; align-items:center; height:100vh; }
+.container { background:white; padding:30px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); width:100%; max-width:400px; }
+input, button { width:100%; padding:10px; margin-top:10px; border-radius:8px; border:1px solid #ccc; font-size:16px; }
+button { background:#007bff; color:white; border:none; cursor:pointer; }
+button:hover { background:#0056b3; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Login</h2>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button id="loginBtn">Login</button>
+  <p>Belum punya akun? <a href="register.html">Register</a></p>
+</div>
+
+<script>
+const loginBtn = document.getElementById('loginBtn');
+
+loginBtn.addEventListener('click', ()=>{
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  if(!email || !password){ alert("Isi email & password"); return; }
+
+  const users = JSON.parse(localStorage.getItem('users') || "[]");
+  const user = users.find(u=>u.email===email && u.password===password);
+  if(!user){ alert("Email atau password salah"); return; }
+
+  localStorage.setItem('currentUser', JSON.stringify(user));
+  window.location.href = "dashboard.html";
+});
+</script>
+
+</body>
+</html>

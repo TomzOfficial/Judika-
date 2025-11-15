@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard</title>
+<style>
+body { font-family:Arial,sans-serif; background:#f0f2f5; margin:0; padding:0; }
+header { background:#007bff; color:white; padding:20px; text-align:center; }
+.container { padding:20px; max-width:600px; margin:20px auto; background:white; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); }
+button { padding:10px 15px; background:#007bff; color:white; border:none; border-radius:8px; cursor:pointer; margin-top:10px; }
+button:hover { background:#0056b3; }
+input { width:100%; padding:10px; margin-top:10px; border-radius:8px; border:1px solid #ccc; font-size:16px; }
+#qrisContainer img { margin-top:15px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Dashboard</h1>
+</header>
+
+<div class="container" id="depositSection">
+  <h2 id="welcome"></h2>
+  <p id="balance"></p>
+  <button id="logoutBtn">Logout</button>
+  <hr>
+  <h3>Deposit Saldo</h3>
+  <input type="number" id="depositAmount" placeholder="Masukkan nominal deposit" min="1000">
+  <button id="generateQRBtn">Generate QRIS</button>
+  <div id="qrisContainer"></div>
+</div>
+
+<script>
+const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+const welcome = document.getElementById('welcome');
+const logoutBtn = document.getElementById('logoutBtn');
+const depositAmount = document.getElementById('depositAmount');
+const generateQRBtn = document.getElementById('generateQRBtn');
+const qrisContainer = document.getElementById('qrisContainer');
+const balanceEl = document.getElementById('balance');
+
+if(!currentUser){ alert("Silakan login!"); window.location.href="login.html"; }
+let userBalance = currentUser.balance || 0;
+balanceEl.textContent = `Saldo Anda: Rp ${userBalance}`;
+welcome.textContent = `Selamat datang, ${currentUser.name}!`;
+
+// Logout
+logoutBtn.addEventListener('click', ()=>{
+  localStorage.removeItem('currentUser');
+  window.location.href="login.html";
+});
+
+// Generate QRIS
+generateQRBtn.addEventListener('click', async ()=>{
+  const amount = depositAmount.value;
+  if(amount < 1000){ alert("Minimal deposit 1000"); return; }
+
+  try{
+    const res = await fetch("/generate-qris", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ amount, email: currentUser.email })
+    });
+    const data = await res.json();
+    if(data.success){
+      qrisContainer.innerHTML = `<img src="${data.qrUrl}" alt="QRIS">`;
+
+      // Auto cek status setiap 5 detik
+      const interval = setInterval(async ()=>{
+        const statusRes = await fetch("/check-payment", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({ merchantOrderId:data.merchantOrderId })
+        });
+        const statusData = await statusRes.json();
+        if(statusData.success){
+          clearInterval(interval);
+          userBalance += parseInt(amount);
+          balanceEl.textContent = `Saldo Anda: Rp ${userBalance}`;
+          currentUser.balance = userBalance;
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+          // Update user di localStorage users array
+          const users = JSON.parse(localStorage.getItem('users') || "[]");
+          const user = users.find(u=>u.email===currentUser.email);
+          if(user){ user.balance = userBalance; localStorage.setItem('users', JSON.stringify(users)); }
+
+          alert("Deposit berhasil! Saldo terupdate.");
+        }
+      }, 5000);
+
+    } else alert("Gagal generate QRIS: "+data.error);
+  } catch(err){ console.error(err); alert("Error generate QRIS"); }
+});
+</script>
+
+</body>
+</html>
